@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- Standalone copy of the CBBHF interactive demo. Open this file directly in a browser; no server needed. Everything is simulated in-page with example data. -->
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>CBBHF Console Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: navy console header band, guided-tour strip of scenario cards, then the simulated app (sidebar + workspace) with a request log; bottom caption narrates running tours. */
+:root{
+  --bg:#eef3f8;--surface:#ffffff;--surface-2:#f1f6fb;--line:#d8e3ee;--fg:#1a2f45;--muted:#5a6f85;
+  --accent:#1670b3;--accent-soft:#e3f0fb;--accent-ink:#ffffff;--band:#0f2c4d;--band-2:#18629c;--band-fg:#e9f2fb;
+  --ok:#1f7a46;--ok-soft:#e2f4e8;--danger:#b5383a;--danger-soft:#fde8e8;--warn:#9a6411;--warn-soft:#fbf0dc;
+  --sev-critical:#8c1c3c;--sev-high:#c2462b;--sev-medium:#b97c0c;--sev-low:#2c78ad;--sev-info:#687c90;
+  --term-bg:#0e1e30;--term-fg:#cfe0f0;--term-dim:#7d93aa;
+  --node-eng:#17588e;--node-asset:#23899a;--edge:#b5cbe0;
+  --display:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1622;--surface:#112131;--surface-2:#162a3e;--line:#24405b;--fg:#d9e6f2;--muted:#93a9be;
+  --accent:#4ea0e2;--accent-soft:#16344f;--accent-ink:#06192b;--band:#081a2e;--band-2:#124a77;--band-fg:#e3eef9;
+  --ok:#55c486;--ok-soft:#123425;--danger:#f07b7b;--danger-soft:#3a1a1d;--warn:#e3ad4f;--warn-soft:#352a14;
+  --sev-critical:#f0648f;--sev-high:#f08263;--sev-medium:#e6b24a;--sev-low:#62aee6;--sev-info:#98aabd;
+  --term-bg:#060f19;--term-fg:#cfe0f0;--term-dim:#7189a2;
+  --node-eng:#4ea0e2;--node-asset:#45bccc;--edge:#2f5070;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1622;--surface:#112131;--surface-2:#162a3e;--line:#24405b;--fg:#d9e6f2;--muted:#93a9be;
+  --accent:#4ea0e2;--accent-soft:#16344f;--accent-ink:#06192b;--band:#081a2e;--band-2:#124a77;--band-fg:#e3eef9;
+  --ok:#55c486;--ok-soft:#123425;--danger:#f07b7b;--danger-soft:#3a1a1d;--warn:#e3ad4f;--warn-soft:#352a14;
+  --sev-critical:#f0648f;--sev-high:#f08263;--sev-medium:#e6b24a;--sev-low:#62aee6;--sev-info:#98aabd;
+  --term-bg:#060f19;--term-fg:#cfe0f0;--term-dim:#7189a2;
+  --node-eng:#4ea0e2;--node-asset:#45bccc;--edge:#2f5070;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body)}
+.gutter{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1240px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+code,.mono{font-family:var(--mono);font-size:.88em}
+small,.muted{color:var(--muted)}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header band */
+.band{background:linear-gradient(110deg,var(--band),var(--band-2));color:var(--band-fg)}
+.band .wrap{padding-block:26px 22px;display:flex;flex-wrap:wrap;gap:12px 28px;align-items:flex-end;justify-content:space-between}
+.band h1{font-size:28px;letter-spacing:.01em}
+.band p{margin:4px 0 0;opacity:.85}
+.band .tags{display:flex;gap:8px;flex-wrap:wrap}
+.tag{font:500 12px var(--mono);border:1px solid color-mix(in srgb,var(--band-fg) 35%,transparent);border-radius:20px;padding:3px 10px}
+
+/* tour */
+.tour{padding-block:22px 6px}
+.tour-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 16px;margin-bottom:12px}
+.tour-head h2{font-size:20px}
+.tour-head p{margin:0;color:var(--muted);max-width:70ch}
+.scenarios{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.scn{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.scn .k{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.scn h3{font-size:16px}
+.scn p{margin:0;font-size:13.5px;color:var(--muted);flex:1}
+.scn button{align-self:flex-start}
+.scn.running{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+/* app */
+.app{display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px;padding-block:18px 120px}
+aside,section.ws{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0;transition:box-shadow .3s,border-color .3s}
+.card.spot{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.card h2{font-size:17px;margin-bottom:10px}
+.card h3{font-size:14px;margin:16px 0 8px}
+.card > p{margin:0 0 10px;font-size:13.5px;color:var(--muted)}
+.ver{font:500 11px var(--mono);color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:1px 7px;margin-left:6px;vertical-align:2px}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:10px 0 4px;letter-spacing:.02em}
+label.check{display:flex;gap:8px;align-items:flex-start;font-weight:500;font-size:13px;color:var(--fg);letter-spacing:0}
+label.check input{width:auto;margin-top:3px}
+input,textarea,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);font:inherit;font-size:14px}
+textarea{min-height:74px;resize:vertical}
+textarea.code{font-family:var(--mono);font-size:12px;min-height:96px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row > input{flex:1;min-width:160px}
+button{background:var(--accent);color:var(--accent-ink);border:0;padding:9px 14px;border-radius:8px;cursor:pointer;font:600 13.5px var(--body)}
+button:hover{filter:brightness(1.08)}
+button:disabled{opacity:.45;cursor:not-allowed;filter:none}
+button.secondary{background:var(--accent-soft);color:var(--accent)}
+button.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
+button.danger{background:var(--danger);color:#fff}
+button.sm{padding:5px 9px;font-size:12px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:3px 10px;font:600 12px var(--body)}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.on{background:var(--ok-soft);color:var(--ok)}
+.pill.off{background:var(--danger-soft);color:var(--danger)}
+.pill.none{background:var(--surface-2);color:var(--muted)}
+
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.toolbar h2{margin:0}
+.eng-meta{font-size:13px;color:var(--muted);margin:6px 0 0;display:flex;flex-wrap:wrap;gap:4px 14px}
+.scope-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{font:500 12px var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.stat{background:var(--surface-2);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--muted)}
+.stat b{display:block;font:700 26px var(--display);color:var(--fg);font-variant-numeric:tabular-nums}
+
+.englist{display:flex;flex-direction:column;gap:6px}
+.eng{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;width:100%;background:var(--surface-2);color:var(--fg);border:1px solid transparent;font-weight:500}
+.eng.sel{border-color:var(--accent);background:var(--accent-soft)}
+.eng small{display:block;font-weight:400}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--muted);opacity:.5}
+.dot.on{background:var(--ok);opacity:1}
+
+.tools{display:grid;grid-template-columns:1fr auto;gap:6px 10px;font-size:13.5px}
+.tools span:nth-child(even){font-weight:600}
+.yes{color:var(--ok)} .no{color:var(--muted)}
+
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+td.host{font-family:var(--mono);font-size:12.5px;overflow-wrap:anywhere}
+tr.new td{animation:flash 1.6s ease-out}
+@keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}
+
+.sev{display:inline-block;font:600 11.5px var(--body);padding:2px 8px;border-radius:5px;color:#fff;letter-spacing:.02em}
+.sev-Critical{background:var(--sev-critical)}.sev-High{background:var(--sev-high)}.sev-Medium{background:var(--sev-medium)}.sev-Low{background:var(--sev-low)}.sev-Info{background:var(--sev-info)}
+.st{font-size:12.5px;font-weight:600}
+.st-Draft{color:var(--warn)}.st-Validated{color:var(--ok)}.st-Submitted{color:var(--accent)}.st-Resolved{color:var(--muted)}
+
+.verdict{margin-top:10px;font-size:13.5px;border-radius:8px;padding:10px 12px}
+.verdict.ok{background:var(--ok-soft);color:var(--ok)}
+.verdict.bad{background:var(--danger-soft);color:var(--danger)}
+.verdict small{display:block;color:inherit;opacity:.85}
+
+.term{background:var(--term-bg);color:var(--term-fg);font:12.5px/1.6 var(--mono);border-radius:10px;padding:12px 14px;margin-top:12px;max-height:230px;overflow:auto}
+.term .cmd{color:var(--term-dim)}
+.term .in{color:#7fd6a0}.term .out{color:#f29191}
+.job{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.job:last-child{border-bottom:0}
+.job .bar{flex:1 1 120px;height:6px;background:var(--surface-2);border-radius:4px;overflow:hidden;min-width:80px}
+.job .bar i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.jst{font-weight:600}.jst-running{color:var(--accent)}.jst-completed{color:var(--ok)}.jst-cancelled{color:var(--danger)}
+
+.graph-box{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+#graph{display:block;width:100%;min-width:620px}
+#graph text{font:11.5px var(--body);fill:var(--fg)}
+#graph .lbl-muted{fill:var(--muted);font:600 10px var(--mono);letter-spacing:.08em}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+
+.ev{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.ev:last-child{border-bottom:0}
+.hash{font:12px var(--mono);color:var(--muted);overflow-wrap:anywhere}
+
+.results{margin-top:12px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.res{border-radius:8px;padding:8px 10px}
+.res.acc{background:var(--ok-soft);color:var(--ok)}
+.res.rej{background:var(--danger-soft);color:var(--danger)}
+.res ul{margin:4px 0 0;padding-left:18px}
+
+.msg{border-radius:8px;padding:10px 12px;font-size:13.5px;background:var(--ok-soft);color:var(--ok)}
+.msg.err{background:var(--danger-soft);color:var(--danger)}
+
+.reqlog{font:12px/1.7 var(--mono);max-height:220px;overflow:auto}
+.reqlog div{display:grid;grid-template-columns:auto 1fr auto;gap:8px;border-bottom:1px dashed var(--line)}
+.reqlog .m{font-weight:600;color:var(--accent)}
+.reqlog .p{overflow-wrap:anywhere}
+.reqlog .c2{color:var(--ok)}.reqlog .c4{color:var(--danger)}
+.audit{font-size:12.5px;max-height:220px;overflow:auto}
+.audit div{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.audit code{color:var(--fg)}
+
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--fg);padding:0;width:min(640px,calc(100vw - 32px));max-height:calc(100vh - 48px)}
+dialog::backdrop{background:rgb(5 15 28 / .55)}
+.dlg{padding:20px;display:flex;flex-direction:column;gap:6px}
+.dlg h2{font-size:18px}
+#reportDlg{width:min(860px,calc(100vw - 32px))}
+.report{background:#fff;color:#19334a;border-radius:10px;padding:26px;max-height:65vh;overflow:auto;font-size:14.5px}
+.report h1{font:700 22px var(--body);margin:0}
+.report article{border:1px solid #dcdcdc;border-radius:12px;padding:16px 18px;margin:14px 0}
+.report article h2{font:600 17px var(--body)}
+.report h3{font:600 13px var(--body);margin:10px 0 4px}
+.report pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12.5px var(--mono);margin:0;background:#f5f7f9;padding:8px;border-radius:6px}
+
+.caption{position:fixed;left:0;right:0;bottom:0;z-index:20;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));pointer-events:none}
+.caption .inner{pointer-events:auto;max-width:760px;margin:0 auto;background:var(--band);color:var(--band-fg);border-radius:12px;padding:12px 16px;box-shadow:0 10px 30px rgb(0 0 0 / .25);display:flex;gap:14px;align-items:center}
+.caption .n{font:600 12px var(--mono);opacity:.8;white-space:nowrap}
+.caption .t{flex:1;font-size:14px}
+.caption .t b{display:block;font-family:var(--display);font-size:15px}
+.caption button{background:transparent;border:1px solid color-mix(in srgb,var(--band-fg) 40%,transparent);color:var(--band-fg)}
+
+@media (max-width:980px){.scenarios{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){.app{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){.scenarios{grid-template-columns:minmax(0,1fr)}.stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.stat{padding:10px}.stat b{font-size:20px}.caption .inner{flex-wrap:wrap}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="band gutter">
+  <div class="wrap">
+    <div>
+      <h1>◈ CBBHF Research Console</h1>
+      <p>Bug bounty operations · Scope-first workflow · Local Kali Linux deployment</p>
+    </div>
+    <div class="tags"><span class="tag">v1.2.0</span><span class="tag">127.0.0.1:8765</span><span class="tag">interactive demo</span></div>
+  </div>
+</header>
+
+<div class="gutter">
+<div class="wrap">
+  <section class="tour" aria-labelledby="tourTitle">
+    <div class="tour-head">
+      <h2 id="tourTitle">Guided demos</h2>
+      <p>Each demo drives the console below step by step. Everything is simulated in your browser with example data on <code>example.org</code> and <code>example.net</code>. No network requests and no real tools run. You can also click around freely.</p>
+    </div>
+    <div class="scenarios" id="scenarios"></div>
+  </section>
+
+  <div class="app">
+    <aside>
+      <div class="card" id="cardEngs">
+        <h2>Engagements</h2>
+        <div class="englist" id="engList"></div>
+      </div>
+      <div class="card" id="cardNew">
+        <h2>New engagement</h2>
+        <form id="newEng">
+          <label for="ne-name">Program name</label><input id="ne-name" name="name" required minlength="2" placeholder="Authorized demo">
+          <label for="ne-url">Program policy URL (HTTPS)</label><input id="ne-url" name="program_url" required placeholder="https://example.org/policy">
+          <label for="ne-auth">Authorization / rules acknowledgment</label><textarea id="ne-auth" name="authorization" required minlength="15" placeholder="I have reviewed the published program rules and have permission to test these assets."></textarea>
+          <label for="ne-scope">In-scope DNS hosts (one per line)</label><textarea id="ne-scope" name="scope" required placeholder="example.org&#10;*.example.org"></textarea>
+          <div class="btns"><button>Create engagement</button></div>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Tool availability</h2>
+        <div class="tools" id="tools"></div>
+      </div>
+      <div class="card" id="cardAudit">
+        <h2>Audit log</h2>
+        <div class="audit" id="audit"></div>
+      </div>
+      <div class="card">
+        <h2>API requests</h2>
+        <p>Calls the real UI would send to the FastAPI backend.</p>
+        <div class="reqlog" id="reqlog"></div>
+      </div>
+    </aside>
+
+    <section class="ws">
+      <div id="msg" class="msg" hidden></div>
+
+      <div class="card" id="cardOverview">
+        <div class="toolbar"><h2 id="selName">Select an engagement</h2><span id="state" class="pill none">No selection</span></div>
+        <div class="eng-meta" id="engMeta"></div>
+        <div class="scope-chips" id="scopeChips"></div>
+        <div class="stats">
+          <div class="stat">Assets<b id="sAssets">0</b></div>
+          <div class="stat">Findings<b id="sFindings">0</b></div>
+          <div class="stat">High / Critical<b id="sRisk">0</b></div>
+        </div>
+        <div class="btns">
+          <button id="activate">Activate</button>
+          <button id="stop" class="danger">Emergency stop</button>
+          <button id="reportBtn" class="ghost">Printable report ↗</button>
+        </div>
+      </div>
+
+      <div class="card" id="cardScope">
+        <h2>Scope checker</h2>
+        <p>Runs the same allowlist check the backend applies to assets, recon output and imports. Wildcard <code>*.example.org</code> does not include the apex <code>example.org</code>.</p>
+        <div class="row"><input id="scopeInput" placeholder="hostname to check, e.g. shop.example.net"><button id="scopeBtn" class="secondary">Check</button></div>
+        <div id="scopeOut"></div>
+        <div class="tbl" id="scopeTable"></div>
+      </div>
+
+      <div class="card" id="cardRecon">
+        <h2>Passive reconnaissance <span class="ver">v1.1 jobs</span></h2>
+        <p>Requires an active engagement, one explicit root domain and authorization. Only subfinder/amass passive discovery, fixed argv, 90 s timeout. No active scanning.</p>
+        <div class="row">
+          <select id="reconTool" style="flex:1;min-width:180px"><option value="subfinder">Subfinder (passive)</option><option value="amass">Amass (passive)</option></select>
+          <button id="runRecon">Start background discovery</button>
+        </div>
+        <label class="check"><input id="confirm" type="checkbox"> I confirm this activity is authorized under the program rules.</label>
+        <h3>Background jobs</h3>
+        <div id="jobs"></div>
+        <div class="term" id="term" hidden></div>
+      </div>
+
+      <div class="card" id="cardAssets">
+        <h2>Assets</h2>
+        <form id="newAsset" class="row"><input id="assetHost" name="host" required placeholder="in-scope.example.org"><button>Add in-scope asset</button></form>
+        <div class="tbl" id="assets" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card" id="cardGraph">
+        <h2>Attack surface map</h2>
+        <p>Relationships from stored inventory only. No network probes.</p>
+        <div class="graph-box"><svg id="graph" role="img" aria-label="Engagement, asset and finding relationships"></svg></div>
+        <div class="legend"><span><i style="background:var(--node-eng)"></i>Engagement</span><span><i style="background:var(--node-asset)"></i>Asset</span><span><i style="background:var(--sev-high)"></i>Finding (colored by severity)</span></div>
+      </div>
+
+      <div class="card" id="cardEvidence">
+        <h2>Evidence vault</h2>
+        <p>Up to 5 MiB per file. TXT, MD, JSON, PNG, JPG, PDF only. SHA-256 recorded on upload. Do not upload customer secrets.</p>
+        <form id="evidenceForm" class="row"><input id="evidenceFile" type="file" accept=".txt,.md,.json,.png,.jpg,.jpeg,.pdf"><button>Attach evidence</button><button type="button" id="sampleEv" class="secondary">Attach sample-evidence.txt</button></form>
+        <div id="evidenceList" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card" id="cardImport">
+        <h2>Scanner results import <span class="ver">v1.2</span></h2>
+        <p>Offline JSON/JSONL imports only. No scans are launched. Every imported observation stays Draft until an analyst validates it.</p>
+        <label for="importSource">Export format</label>
+        <select id="importSource"><option value="nuclei">Nuclei JSONL</option><option value="zap">OWASP ZAP JSON report</option><option value="burp">Burp normalized JSON issues</option></select>
+        <label for="importPayload">Export contents (paste, choose a file, or load the sample)</label>
+        <textarea id="importPayload" class="code" spellcheck="false"></textarea>
+        <div class="row" style="margin-top:8px"><input id="importFile" type="file" accept=".json,.jsonl"><button type="button" id="loadSample" class="secondary">Load sample export</button></div>
+        <label class="check"><input id="importConfirm" type="checkbox"> I confirm the source assessment was authorized.</label>
+        <div class="btns"><button id="importBtn">Import findings for review</button></div>
+        <div class="results" id="importResults"></div>
+      </div>
+
+      <div class="card" id="cardFindings">
+        <h2>Findings</h2>
+        <div class="tbl" id="findings"></div>
+        <h3>New finding</h3>
+        <form id="newFinding">
+          <label for="nf-title">Title</label><input id="nf-title" name="title" required>
+          <label for="nf-asset">Asset hostname</label><input id="nf-asset" name="asset" required>
+          <div class="row">
+            <div style="flex:1;min-width:140px"><label for="nf-sev">Severity</label><select id="nf-sev" name="severity"><option>Info</option><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></div>
+            <div style="flex:1;min-width:140px"><label for="nf-st">Status</label><select id="nf-st" name="status"><option>Draft</option><option>Validated</option><option>Submitted</option><option>Resolved</option></select></div>
+          </div>
+          <label for="nf-desc">Description / reproduction</label><textarea id="nf-desc" name="description"></textarea>
+          <label for="nf-ev">Evidence reference (avoid sensitive data)</label><textarea id="nf-ev" name="evidence"></textarea>
+          <div class="btns"><button>Save finding</button></div>
+        </form>
+      </div>
+    </section>
+  </div>
+</div>
+</div>
+
+<dialog id="reviewDlg"><form method="dialog" class="dlg" id="reviewForm">
+  <h2>Manual validation</h2>
+  <small id="reviewWhat"></small>
+  <label for="reviewStatus">New status</label>
+  <select id="reviewStatus"><option>Validated</option><option>Submitted</option><option>Resolved</option><option>Draft</option></select>
+  <label for="reviewNote">Describe how you reproduced it (required)</label>
+  <textarea id="reviewNote" placeholder="Reproduced with two test accounts I control…"></textarea>
+  <small id="reviewErr" style="color:var(--danger)"></small>
+  <div class="btns"><button value="ok" id="reviewOk">Record review</button><button value="cancel" class="ghost" formnovalidate>Cancel</button></div>
+</form></dialog>
+
+<dialog id="reportDlg"><div class="dlg">
+  <div class="toolbar"><h2>Report preview</h2><button class="ghost sm" id="reportClose">Close</button></div>
+  <small>In the real app this opens at <code id="reportPath"></code>; use the browser's Print → Save as PDF.</small>
+  <div class="report" id="reportBody"></div>
+</div></dialog>
+
+<div class="caption gutter" id="caption" hidden><div class="inner">
+  <span class="n" id="capN"></span><div class="t" id="capT"></div><button class="sm" id="capStop">Stop</button>
+</div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():Math.random().toString(16).slice(2)+Date.now().toString(16));
+const now=()=>new Date().toISOString();
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+class ApiErr extends Error{constructor(code,detail){super(detail);this.code=code}}
+
+/* ---- ports of backend/app.py validation ---- */
+function normalizeHost(raw){
+  raw=String(raw??'').trim().toLowerCase();
+  if(!raw||/[*\/\\@ ?#:]/.test(raw))throw new ApiErr(400,'Provide a bare DNS hostname, not URL, wildcard or port');
+  if(raw.length>253||!/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(raw))throw new ApiErr(400,'Invalid hostname');
+  if(raw.includes('..'))throw new ApiErr(400,'Invalid hostname');
+  if(/^\d{1,3}(\.\d{1,3}){3}$/.test(raw))throw new ApiErr(400,'IP targets not supported in this release');
+  if(!raw.includes('.'))throw new ApiErr(400,'Fully qualified hostname required');
+  return raw;
+}
+function allowed(host,scope){
+  host=normalizeHost(host);
+  for(let e of scope){e=e.toLowerCase().trim();
+    if(e.startsWith('*.')){if(host.endsWith('.'+normalizeHost(e.slice(2))))return true}
+    else if(host===normalizeHost(e))return true}
+  return false;
+}
+function hostFromObservation(raw){
+  if(typeof raw!=='string')throw new ApiErr(400,'Missing URL or hostname');
+  if(/^[a-z][a-z0-9+.-]*:/i.test(raw)){
+    let u;try{u=new URL(raw)}catch{throw new ApiErr(400,'Unsupported URL')}
+    if(!['http:','https:'].includes(u.protocol)||!u.hostname||u.username||u.password)throw new ApiErr(400,'Unsupported URL');
+    return normalizeHost(u.hostname.replace(/^\[|\]$/g,''));
+  }
+  return normalizeHost(raw);
+}
+function severityFrom(raw){const t=String(raw).trim().toLowerCase();
+  for(const l of ['critical','high','medium','low','info','informational'])if(t.startsWith(l))return l==='informational'?'Info':l[0].toUpperCase()+l.slice(1);
+  return 'Info'}
+
+/* ---- in-memory "database" ---- */
+let S;
+function seed(){
+  const t=(m)=>new Date(Date.now()-m*60000).toISOString();
+  S={tools:{subfinder:true,amass:true,httpx:false,spiderfoot:false},engagements:[
+    {id:'7f3c1a2e-demo-a',name:'Example Corp VDP (demo)',program_url:'https://example.org/security/policy',authorization:'Example only. Program rules reviewed; passive subdomain discovery is permitted under section 4.',scope:['example.org','*.example.org'],active:false,created:t(300)},
+    {id:'b81d44c0-demo-b',name:'Shop Platform BBP (demo)',program_url:'https://example.net/bounty',authorization:'Example only. Automated scanning permitted at 5 req/s; no DoS, no social engineering.',scope:['api.example.net','*.shop.example.net'],active:false,created:t(120)}],
+  assets:[],findings:[],jobs:[],evidence:[],audit:[],reqs:[]};
+  const A='7f3c1a2e-demo-a',B='b81d44c0-demo-b';
+  [['example.org','manual'],['app.example.org','manual'],['api.example.org','subfinder'],['auth.example.org','subfinder']].forEach(([h,s])=>S.assets.push({id:uid(),engagement_id:A,host:h,source:s,created:t(200)}));
+  [['api.example.net','manual'],['checkout.shop.example.net','manual']].forEach(([h,s])=>S.assets.push({id:uid(),engagement_id:B,host:h,source:s,created:t(100)}));
+  S.findings.push({id:uid(),engagement_id:A,title:'IDOR on invoice download endpoint',severity:'High',status:'Validated',asset:'app.example.org',description:'Synthetic example. GET /invoices/{id}/pdf returns another tenant\'s invoice when the id is incremented.\n1. Log in as test account A.\n2. Request invoice id owned by test account B.',evidence:'Screenshot ref: EV-0007 (redacted). Both accounts are tester-owned.',created:t(180)});
+  S.findings.push({id:uid(),engagement_id:A,title:'Verbose stack trace on 500 errors',severity:'Low',status:'Draft',asset:'api.example.org',description:'Synthetic example. Malformed JSON body returns a framework stack trace with internal paths.',evidence:'Response excerpt stored as EV-0009.',created:t(90)});
+  S.findings.push({id:uid(),engagement_id:B,title:'Coupon code reusable across accounts',severity:'Medium',status:'Submitted',asset:'checkout.shop.example.net',description:'Synthetic example. Single-use coupon accepted twice from two tester accounts.',evidence:'EV-0002',created:t(60)});
+  S.jobs.push({id:uid(),engagement_id:A,tool:'subfinder',root:'example.org',status:'completed',discovered:2,progress:1,started:t(210),error:''});
+  S.audit=[['engagement.created',{name:'Example Corp VDP (demo)'},300],['asset.added',{host:'app.example.org'},200],['recon.job.finished',{status:'completed',discovered:2},205],['finding.reviewed',{status:'Validated'},170],['engagement.created',{name:'Shop Platform BBP (demo)'},120]].map(([e,d,m])=>({at:t(m),event:e,detail:d})).reverse();
+  S.current=A;
+}
+function log(event,detail){S.audit.unshift({at:now(),event,detail})}
+const eng=id=>{const e=S.engagements.find(x=>x.id===id);if(!e)throw new ApiErr(404,'Engagement not found');return e};
+
+/* ---- simulated API router (same paths/status codes as the FastAPI app) ---- */
+const routes=[
+ ['POST',/^\/engagements$/,(m,v)=>{
+   if((v.name||'').trim().length<2)throw new ApiErr(422,'Program name must be at least 2 characters');
+   let u;try{u=new URL(v.program_url)}catch{}
+   if(!u||u.protocol!=='https:'||!u.host)throw new ApiErr(400,'Program URL must be HTTPS');
+   if((v.authorization||'').trim().length<15)throw new ApiErr(422,'Authorization acknowledgment must be at least 15 characters');
+   if(!v.scope.length)throw new ApiErr(422,'Scope needs at least one entry');
+   v.scope.forEach(x=>normalizeHost(x.startsWith('*.')?x.slice(2):x));
+   const id=uid();S.engagements.unshift({id,name:v.name,program_url:v.program_url,authorization:v.authorization,scope:v.scope,active:false,created:now()});
+   log('engagement.created',{name:v.name});return {id}}],
+ ['POST',/^\/engagements\/([^/]+)\/activate$/,(m)=>{eng(m[1]).active=true;log('engagement.activated',{id:m[1].slice(0,8)});return {active:true}}],
+ ['POST',/^\/engagements\/([^/]+)\/stop$/,(m)=>{eng(m[1]).active=false;log('engagement.stopped',{id:m[1].slice(0,8)});S.jobs.filter(j=>j.engagement_id===m[1]&&j.status==='running').forEach(j=>j.cancel=true);return {active:false}}],
+ ['POST',/^\/engagements\/([^/]+)\/assets$/,(m,v)=>{const e=eng(m[1]);const host=normalizeHost(v.host);
+   if(!allowed(host,e.scope))throw new ApiErr(403,'Target outside scope');
+   if(!S.assets.some(a=>a.engagement_id===e.id&&a.host===host))S.assets.push({id:uid(),engagement_id:e.id,host,source:'manual',created:now(),fresh:true});
+   log('asset.added',{host});return {host}}],
+ ['POST',/^\/engagements\/([^/]+)\/findings$/,(m,v)=>{const e=eng(m[1]);const host=normalizeHost(v.asset);
+   if(!allowed(host,e.scope))throw new ApiErr(403,'Asset outside scope');
+   const id=uid();S.findings.unshift({id,engagement_id:e.id,title:v.title,severity:v.severity,status:v.status,asset:host,description:v.description||'',evidence:v.evidence||'',created:now(),fresh:true});
+   log('finding.created',{finding:id.slice(0,8)});return {id}}],
+ ['PATCH',/^\/engagements\/([^/]+)\/findings\/([^/]+)\/review$/,(m,v)=>{eng(m[1]);const f=S.findings.find(x=>x.id===m[2]&&x.engagement_id===m[1]);
+   if(!f)throw new ApiErr(404,'Finding not found');
+   if(!['Draft','Validated','Submitted','Resolved'].includes(v.status))throw new ApiErr(400,'Invalid review status');
+   f.status=v.status;if(v.analyst_note)f.evidence+='\n[Analyst review '+now()+'] '+v.analyst_note;
+   log('finding.reviewed',{status:v.status});return {id:f.id,status:v.status}}],
+ ['POST',/^\/engagements\/([^/]+)\/jobs$/,(m,v)=>{
+   if(!['subfinder','amass'].includes(v.tool))throw new ApiErr(400,'Only passive discovery tools are supported');
+   if(!v.confirm_authorized)throw new ApiErr(403,'Authorization confirmation required');
+   const e=eng(m[1]);if(!e.active)throw new ApiErr(403,'Engagement stopped');
+   const roots=e.scope.filter(s=>!s.startsWith('*.'));
+   if(roots.length!==1||e.scope.some(s=>s!==roots[0]&&s!=='*.'+roots[0]))throw new ApiErr(400,'One explicit root and optional matching wildcard required');
+   if(!S.tools[v.tool])throw new ApiErr(400,v.tool+' is not installed');
+   if(S.jobs.some(j=>j.engagement_id===e.id&&j.status==='running'))throw new ApiErr(409,'An engagement job is already running');
+   const job={id:uid(),engagement_id:e.id,tool:v.tool,root:roots[0],status:'running',discovered:0,progress:0,started:now(),error:''};
+   S.jobs.unshift(job);log('recon.job.started',{tool:v.tool});runJob(job,e);return {job_id:job.id,status:'running'}}],
+ ['POST',/^\/engagements\/([^/]+)\/jobs\/([^/]+)\/cancel$/,(m)=>{eng(m[1]);const j=S.jobs.find(x=>x.id===m[2]);if(!j)throw new ApiErr(404,'Job not found');
+   const live=j.status==='running';if(live)j.cancel=true;return {cancel_requested:live}}],
+ ['POST',/^\/engagements\/([^/]+)\/evidence$/,(m,v)=>{eng(m[1]);
+   const ext=(v.filename.match(/\.[^.]+$/)||[''])[0].toLowerCase();
+   if(!['.txt','.md','.json','.png','.jpg','.jpeg','.pdf'].includes(ext))throw new ApiErr(400,'Unsupported evidence type');
+   if(v.size>5*1024*1024)throw new ApiErr(413,'Evidence exceeds 5 MiB');
+   if(v.size===0)throw new ApiErr(400,'Empty file');
+   const rec={id:uid(),engagement_id:m[1],filename:v.filename,size:v.size,sha256:v.sha256,created:now()};
+   S.evidence.unshift(rec);log('evidence.uploaded',{file:v.filename});return rec}],
+ ['POST',/^\/engagements\/([^/]+)\/imports$/,(m,v)=>{
+   if(!v.confirm_authorized)throw new ApiErr(403,'Authorization confirmation required');
+   if(new Blob([v.payload]).size>2*1024*1024)throw new ApiErr(413,'Import exceeds 2 MiB');
+   let records;try{records=sourceRecords(v.source,v.payload)}catch(ex){throw new ApiErr(400,'Invalid import: '+String(ex.message).slice(0,160))}
+   const e=eng(m[1]);const accepted=[],rejected=[];
+   records.forEach((r,index)=>{try{
+     const [title,sev,url,description,signature]=recordFields(v.source,r);
+     const host=hostFromObservation(url);
+     if(!allowed(host,e.scope))throw new ApiErr(400,'Outside engagement scope');
+     if(!String(title).trim())throw new ApiErr(400,'Empty title');
+     const id=uid();
+     S.findings.unshift({id,engagement_id:e.id,title:String(title).slice(0,240),severity:severityFrom(sev),status:'Draft',asset:host,description:String(description).slice(0,4000),evidence:JSON.stringify({source:v.source,signature:String(signature).slice(0,120),original_url:String(url).slice(0,500)}),created:now(),fresh:true});
+     accepted.push({id,asset:host,title});
+   }catch(ex){rejected.push({index,reason:String(ex.message).slice(0,120)})}});
+   log('observations.imported',{source:v.source,accepted:accepted.length,rejected:rejected.length});
+   return {source:v.source,accepted,rejected,message:'Imported findings are Draft and require manual validation.'}}],
+];
+function sourceRecords(source,payload){
+  let records;
+  if(source==='nuclei')records=payload.split(/\r?\n/).filter(l=>l.trim()).map(l=>JSON.parse(l));
+  else if(source==='zap'){const d=JSON.parse(payload);records=(d.site||[]).flatMap(s=>(s.alerts||[]).map(a=>({...a,_site:s['@name']||''})))}
+  else if(source==='burp'){const d=JSON.parse(payload);records=Array.isArray(d)?d:(d.issues||[])}
+  else throw new Error('Supported sources: nuclei, zap, burp');
+  if(!Array.isArray(records)||records.length>500)throw new Error('Expected a list with at most 500 findings');
+  if(!records.every(r=>r&&typeof r==='object'&&!Array.isArray(r)))throw new Error('Every finding must be a JSON object');
+  return records;
+}
+function recordFields(source,r){
+  if(source==='nuclei'){const i=r.info||{};return [i.name||r['template-id']||'Nuclei observation',i.severity||'info',r['matched-at']||r.host||'',i.description||'',r['template-id']||'']}
+  if(source==='zap')return [r.name||r.alert||'ZAP observation',r.riskdesc||r.risk||'info',r.instances&&r.instances.length?(r.instances[0].uri||''):r._site,r.desc||'',r.pluginid||''];
+  return [r.name||r.title||'Burp observation',r.severity||'info',r.url||r.host||'',r.description||r.detail||'',r.type||''];
+}
+function api(method,path,body){
+  for(const [m,re,fn] of routes){const match=path.match(re);if(m===method&&match){
+    try{const out=fn(match,body||{});reqlog(method,path,200);return out}
+    catch(ex){const code=ex.code||500;reqlog(method,path,code,ex.message);throw ex}}}
+  reqlog(method,path,404);throw new ApiErr(404,'Not found');
+}
+function reqlog(m,p,c,detail){S.reqs.unshift({m,p:'/api'+p,c,detail});S.reqs=S.reqs.slice(0,40);renderReqs()}
+
+/* ---- simulated passive recon job ---- */
+const fakeOutput=root=>[`www.${root}`,`mail.${root}`,`staging.${root}`,`status.${root}`,`cdn.${root}.edgecache.net`,`dev-api.${root}`,`auth.${root}`,`legacy.${root}`,`${root}.mirror-archive.org`,`_dmarc_bad_${root}`,`vpn.${root}`,`docs.${root}`];
+function runJob(job,e){
+  const out=fakeOutput(job.root);let i=0;job.lines=[];const db=S;
+  const cmd=job.tool==='subfinder'?`subfinder -d ${job.root} -silent`:`amass enum -passive -d ${job.root}`;
+  job.lines.push({cls:'cmd',t:'$ '+cmd+'   # shell=False, timeout=90s'});
+  const tick=setInterval(()=>{
+    if(S!==db){clearInterval(tick);return}
+    if(job.cancel||!e.active){clearInterval(tick);job.status='cancelled';job.discovered=0;job.lines.push({cls:'out',t:'SIGTERM sent · job cancelled · no assets committed'});log('recon.job.finished',{status:'cancelled',discovered:0});rerender();return}
+    if(i<out.length){const h=out[i++];let ok=false,why='';
+      try{ok=allowed(h,e.scope);why=ok?'in scope':'outside allowlist, dropped'}catch(ex){why=ex.message.toLowerCase()+', dropped'}
+      job.lines.push({cls:ok?'in':'out',t:(ok?'✓ ':'✕ ')+h+'  '+why});job.progress=i/out.length;renderJobs();return}
+    clearInterval(tick);
+    const hosts=[...new Set(out.filter(h=>{try{return allowed(h,e.scope)}catch{return false}}).map(h=>h.toLowerCase()))];
+    let added=0;hosts.forEach(h=>{if(!S.assets.some(a=>a.engagement_id===e.id&&a.host===h)){S.assets.push({id:uid(),engagement_id:e.id,host:h,source:job.tool,created:now(),fresh:true});added++}});
+    job.status='completed';job.discovered=hosts.length;job.progress=1;
+    job.lines.push({cls:'cmd',t:`exit 0 · ${hosts.length} in-scope hosts committed (${added} new)`});
+    log('recon.job.finished',{status:'completed',discovered:hosts.length});rerender();
+  },reduced?120:380);
+}
+
+/* ---- rendering ---- */
+function notify(s,err=false){const m=$('msg');m.textContent=s;m.className='msg'+(err?' err':'');m.hidden=false}
+function safe(fn){return async(...a)=>{try{await fn(...a)}catch(ex){notify(ex.message,true)}}}
+const cur=()=>S.engagements.find(e=>e.id===S.current);
+function rerender(){renderEngs();renderOverview();renderJobs();renderAssets();renderFindings();renderGraph();renderEvidence();renderAudit();renderReqs()}
+function renderEngs(){
+  $('engList').innerHTML=S.engagements.map(e=>`<button class="eng${e.id===S.current?' sel':''}" data-id="${esc(e.id)}"><span>${esc(e.name)}<small>${e.scope.length} scope entr${e.scope.length===1?'y':'ies'}</small></span><span class="dot${e.active?' on':''}" title="${e.active?'Active':'Stopped'}"></span></button>`).join('')||'<small>No engagements yet.</small>';
+  $('engList').querySelectorAll('.eng').forEach(b=>b.onclick=()=>select(b.dataset.id));
+  $('tools').innerHTML=Object.entries(S.tools).map(([k,v])=>`<span class="mono">${esc(k)}</span><span class="${v?'yes':'no'}">${v?'Installed':'Not installed'}</span>`).join('');
+}
+function renderOverview(){
+  const e=cur();if(!e)return;
+  $('selName').textContent=e.name;
+  $('state').className='pill '+(e.active?'on':'off');$('state').textContent=e.active?'Active':'Stopped';
+  $('engMeta').innerHTML=`<span>Policy: <a href="${esc(e.program_url)}" target="_blank" rel="noopener">${esc(e.program_url)}</a></span><span>Created ${esc(e.created.slice(0,10))}</span>`;
+  $('scopeChips').innerHTML=e.scope.map(s=>`<span class="chip">${esc(s)}</span>`).join('');
+  const a=S.assets.filter(x=>x.engagement_id===e.id),f=S.findings.filter(x=>x.engagement_id===e.id);
+  $('sAssets').textContent=a.length;$('sFindings').textContent=f.length;$('sRisk').textContent=f.filter(x=>['High','Critical'].includes(x.severity)).length;
+  $('activate').disabled=e.active;$('stop').disabled=!e.active;
+}
+function renderJobs(){
+  const e=cur();if(!e)return;const jobs=S.jobs.filter(j=>j.engagement_id===e.id).slice(0,6);
+  $('jobs').innerHTML=jobs.map(j=>`<div class="job"><span class="mono">${esc(j.tool)}</span><span class="jst jst-${j.status}">${j.status}</span><span class="bar"><i style="width:${Math.round((j.progress||0)*100)}%"></i></span><small>${j.discovered} hosts · ${esc(j.root)}</small>${j.status==='running'?`<button class="danger sm" data-cancel="${esc(j.id)}">Cancel</button>`:''}</div>`).join('')||'<small>No jobs yet.</small>';
+  $('jobs').querySelectorAll('[data-cancel]').forEach(b=>b.onclick=safe(()=>{api('POST',`/engagements/${S.current}/jobs/${b.dataset.cancel}/cancel`);notify('Cancellation requested')}));
+  const live=jobs.find(j=>j.lines);const t=$('term');
+  if(live){t.hidden=false;t.innerHTML=live.lines.map(l=>`<div class="${l.cls}">${esc(l.t)}</div>`).join('');t.scrollTop=t.scrollHeight}else t.hidden=true;
+}
+function renderAssets(){
+  const a=S.assets.filter(x=>x.engagement_id===S.current).sort((x,y)=>x.host.localeCompare(y.host));
+  $('assets').innerHTML=`<table><tr><th>Hostname</th><th>Source</th></tr>${a.map(x=>`<tr class="${x.fresh?'new':''}"><td class="host">${esc(x.host)}</td><td>${esc(x.source)}</td></tr>`).join('')}</table>`;
+  a.forEach(x=>delete x.fresh);
+}
+function renderFindings(){
+  const f=S.findings.filter(x=>x.engagement_id===S.current);
+  $('findings').innerHTML=f.length?`<table><tr><th>Title</th><th>Asset</th><th>Severity</th><th>Status</th><th></th></tr>${f.map(x=>`<tr class="${x.fresh?'new':''}"><td>${esc(x.title)}</td><td class="host">${esc(x.asset)}</td><td><span class="sev sev-${esc(x.severity)}">${esc(x.severity)}</span></td><td><span class="st st-${esc(x.status)}">${esc(x.status)}</span></td><td><button class="secondary sm" data-review="${esc(x.id)}">${x.status==='Draft'?'Validate':'Review'}</button></td></tr>`).join('')}</table>`:'<small>No findings yet.</small>';
+  f.forEach(x=>delete x.fresh);
+  $('findings').querySelectorAll('[data-review]').forEach(b=>b.onclick=()=>openReview(b.dataset.review));
+}
+function renderGraph(){
+  const e=cur();if(!e)return;const svg=$('graph');const NS='http://www.w3.org/2000/svg';
+  const assets=S.assets.filter(x=>x.engagement_id===e.id).sort((x,y)=>x.host.localeCompare(y.host)).slice(0,120);
+  const finds=S.findings.filter(x=>x.engagement_id===e.id);
+  const rows=[];assets.forEach(a=>{const fs=finds.filter(f=>f.asset===a.host);rows.push({a,fs})});
+  let y=50;const pos={};
+  rows.forEach(r=>{const n=Math.max(1,r.fs.length);const top=y;r.fs.forEach((f,i)=>pos[f.id]={x:640,y:top+i*34});pos['a:'+r.a.host]={x:360,y:top+(n-1)*17};y+=n*34+8});
+  const H=Math.max(160,y+10);svg.setAttribute('viewBox',`0 0 900 ${H}`);svg.replaceChildren();
+  const el=(tag,attrs,text)=>{const n=document.createElementNS(NS,tag);for(const k in attrs){if(k==='fill'||k==='stroke')n.style[k]=attrs[k];else n.setAttribute(k,attrs[k])}if(text!==undefined)n.textContent=text;svg.appendChild(n);return n};
+  const ep={x:90,y:H/2};
+  ['ENGAGEMENT','ASSETS','FINDINGS'].forEach((t,i)=>el('text',{x:[90,360,640][i],y:22,'text-anchor':i?'start':'middle',class:'lbl-muted'},t));
+  rows.forEach(r=>{const p=pos['a:'+r.a.host];
+    el('path',{d:`M${ep.x+14} ${ep.y} C ${ep.x+130} ${ep.y}, ${p.x-130} ${p.y}, ${p.x-9} ${p.y}`,fill:'none',stroke:'var(--edge)','stroke-width':1.5});
+    r.fs.forEach(f=>{const q=pos[f.id];el('path',{d:`M${p.x+9} ${p.y} C ${p.x+60} ${p.y}, ${q.x-60} ${q.y}, ${q.x-8} ${q.y}`,fill:'none',stroke:'var(--edge)','stroke-width':1.5})})});
+  el('circle',{cx:ep.x,cy:ep.y,r:14,fill:'var(--node-eng)'});
+  el('text',{x:ep.x,y:ep.y+30,'text-anchor':'middle'},e.name.length>22?e.name.slice(0,21)+'…':e.name);
+  rows.forEach(r=>{const p=pos['a:'+r.a.host];el('circle',{cx:p.x,cy:p.y,r:8,fill:'var(--node-asset)'});el('text',{x:p.x+14,y:p.y+4},r.a.host.length>30?r.a.host.slice(0,29)+'…':r.a.host);
+    r.fs.forEach(f=>{const q=pos[f.id];el('circle',{cx:q.x,cy:q.y,r:7,fill:`var(--sev-${f.severity.toLowerCase()})`});el('text',{x:q.x+13,y:q.y+4},f.title.length>34?f.title.slice(0,33)+'…':f.title)})});
+}
+function renderEvidence(){
+  const ev=S.evidence.filter(x=>x.engagement_id===S.current);
+  $('evidenceList').innerHTML=ev.map(f=>`<div class="ev"><span>${esc(f.filename)} <small>${f.size.toLocaleString()} bytes</small></span><span class="hash">SHA-256 ${esc(f.sha256)}</span></div>`).join('')||'<small>No evidence files.</small>';
+}
+function renderAudit(){$('audit').innerHTML=S.audit.slice(0,30).map(a=>`<div><code>${esc(a.event)}</code><small class="mono">${esc(a.at.slice(11,19))}</small></div>`).join('')}
+function renderReqs(){$('reqlog').innerHTML=S.reqs.map(r=>`<div title="${esc(r.detail||'')}"><span class="m">${r.m}</span><span class="p">${esc(r.p.replace(/[0-9a-f]{8}-[0-9a-f-]{4,}/gi,s=>s.slice(0,8)+'…'))}</span><span class="${r.c<300?'c2':'c4'}">${r.c}</span></div>`).join('')||'<small>No requests yet.</small>'}
+function select(id){S.current=id;$('scopeOut').innerHTML='';$('scopeTable').innerHTML='';$('importResults').innerHTML='';rerender()}
+
+/* ---- scope checker ---- */
+function checkScope(h){
+  const e=cur();try{const host=normalizeHost(h);
+    if(allowed(host,e.scope))return {ok:true,host,why:`Matches ${e.scope.find(s=>s.startsWith('*.')?host.endsWith('.'+s.slice(2)):s===host)}`};
+    const apex=e.scope.find(s=>s.startsWith('*.')&&s.slice(2)===host);
+    return {ok:false,host,why:apex?`403 Target outside scope. ${apex} covers subdomains only, not the apex.`:'403 Target outside scope. No allowlist entry matches.'};
+  }catch(ex){return {ok:false,host:h,why:`${ex.code} ${ex.message}`}}
+}
+$('scopeBtn').onclick=()=>{const v=$('scopeInput').value;if(!v.trim())return;const r=checkScope(v);
+  $('scopeOut').innerHTML=`<div class="verdict ${r.ok?'ok':'bad'}"><b>${r.ok?'In scope':'Blocked'}</b> · <span class="mono">${esc(v)}</span><small>${esc(r.why)}</small></div>`};
+$('scopeInput').onkeydown=e=>{if(e.key==='Enter')$('scopeBtn').click()};
+
+/* ---- forms ---- */
+$('newEng').onsubmit=safe(ev=>{ev.preventDefault();const v=Object.fromEntries(new FormData(ev.target));
+  v.scope=v.scope.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);const r=api('POST','/engagements',v);
+  ev.target.reset();S.current=r.id;rerender();notify('Engagement created in STOPPED state')});
+$('newAsset').onsubmit=safe(ev=>{ev.preventDefault();api('POST',`/engagements/${S.current}/assets`,{host:$('assetHost').value});ev.target.reset();rerender();notify('Asset added')});
+$('newFinding').onsubmit=safe(ev=>{ev.preventDefault();api('POST',`/engagements/${S.current}/findings`,Object.fromEntries(new FormData(ev.target)));ev.target.reset();rerender();notify('Finding saved')});
+$('activate').onclick=safe(()=>{api('POST',`/engagements/${S.current}/activate`);rerender();notify('Engagement activated')});
+$('stop').onclick=safe(()=>{api('POST',`/engagements/${S.current}/stop`);rerender();notify('Engagement stopped; new recon jobs blocked and running jobs signalled')});
+$('runRecon').onclick=safe(()=>{const r=api('POST',`/engagements/${S.current}/jobs`,{tool:$('reconTool').value,confirm_authorized:$('confirm').checked});renderJobs();renderAudit();notify('Reconnaissance started: '+r.job_id.slice(0,8))});
+
+async function sha256(buf){const d=await crypto.subtle.digest('SHA-256',buf);return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+async function uploadEvidence(name,buf){const h=await sha256(buf);const r=api('POST',`/engagements/${S.current}/evidence`,{filename:name,size:buf.byteLength,sha256:h});renderEvidence();renderAudit();notify('Evidence uploaded; SHA256 '+r.sha256);return r}
+const SAMPLE_EVIDENCE=`SYNTHETIC EXAMPLE ONLY
+Finding: Demo missing authorization check
+Asset: app.example.org
+Steps: Log in with two test accounts under your control; compare permitted object access.
+Expected: Access denied for unauthorized test account.
+Observed: Example placeholder, not an actual vulnerability.
+`;
+$('evidenceForm').onsubmit=safe(async ev=>{ev.preventDefault();const f=$('evidenceFile').files[0];if(!f)throw new Error('Select a file');
+  if(f.size>5*1024*1024)throw new Error('File exceeds 5 MiB');await uploadEvidence(f.name,await f.arrayBuffer());ev.target.reset()});
+$('sampleEv').onclick=safe(()=>uploadEvidence('sample-evidence.txt',new TextEncoder().encode(SAMPLE_EVIDENCE).buffer));
+
+const SAMPLES={
+ nuclei:[
+  {"template-id":"demo-tech","matched-at":"https://app.example.org/","info":{"name":"Illustrative technology fingerprint","severity":"info","description":"Synthetic sample, not a vulnerability."}},
+  {"template-id":"demo-exposed-config","matched-at":"https://staging.example.org/config.json","info":{"name":"Illustrative exposed configuration file","severity":"medium","description":"Synthetic sample. Verify manually."}},
+  {"template-id":"demo-cors","matched-at":"https://partner.example.com/api","info":{"name":"Illustrative permissive CORS policy","severity":"low","description":"Host belongs to a different organization."}},
+  {"template-id":"demo-takeover","host":"10.20.0.8","info":{"name":"Illustrative dangling DNS record","severity":"high"}}
+ ].map(x=>JSON.stringify(x)).join('\n'),
+ zap:JSON.stringify({site:[
+  {"@name":"https://app.example.org","alerts":[{"name":"Illustrative header observation","riskdesc":"Low (Medium)","pluginid":"10021","instances":[{"uri":"https://app.example.org/"}]},{"name":"Illustrative cookie without SameSite","riskdesc":"Low (Medium)","pluginid":"10054","instances":[{"uri":"https://auth.example.org/login"}]}]},
+  {"@name":"https://example.org","alerts":[{"name":"Illustrative CSP not set","riskdesc":"Medium (High)","pluginid":"10038"}]}
+ ]},null,1),
+ burp:JSON.stringify({issues:[
+  {"name":"Example response header observation","severity":"Low","url":"https://app.example.org/","description":"Illustrative data only; verify manually."},
+  {"name":"Example open redirect candidate","severity":"Medium","url":"https://api.example.org/v1/redirect?to=","description":"Illustrative. Confirm redirect target is attacker-controllable."},
+  {"name":"Example FTP banner","severity":"Info","url":"ftp://files.example.org/","description":"Non-HTTP scheme."}
+ ]},null,1)};
+$('loadSample').onclick=()=>{$('importPayload').value=SAMPLES[$('importSource').value]};
+$('importSource').onchange=()=>{if(Object.values(SAMPLES).includes($('importPayload').value)||!$('importPayload').value)$('importPayload').value=SAMPLES[$('importSource').value]};
+$('importFile').onchange=async()=>{const f=$('importFile').files[0];if(!f)return;if(f.size>2*1024*1024){notify('Maximum import size is 2 MiB',true);return}$('importPayload').value=await f.text()};
+function doImport(){
+  if(!$('importConfirm').checked)throw new ApiErr(403,'Confirm authorization');
+  const payload=$('importPayload').value;if(!payload.trim())throw new Error('Choose an export or load the sample');
+  const r=api('POST',`/engagements/${S.current}/imports`,{source:$('importSource').value,payload,confirm_authorized:true});
+  $('importResults').innerHTML=`<div class="res acc"><b>${r.accepted.length} accepted as Draft</b>${r.accepted.length?`<ul>${r.accepted.map(a=>`<li>${esc(a.title)} · <span class="mono">${esc(a.asset)}</span></li>`).join('')}</ul>`:''}</div>`+
+    (r.rejected.length?`<div class="res rej"><b>${r.rejected.length} rejected</b><ul>${r.rejected.map(x=>`<li>#${x.index}: ${esc(x.reason)}</li>`).join('')}</ul></div>`:'');
+  rerender();notify('Import complete; manually review each finding');return r;
+}
+$('importBtn').onclick=safe(doImport);
+
+/* ---- review dialog ---- */
+let reviewing=null;
+function openReview(fid){const f=S.findings.find(x=>x.id===fid);reviewing=fid;
+  $('reviewWhat').textContent=`${f.title} · ${f.asset} · currently ${f.status}`;$('reviewNote').value='';$('reviewErr').textContent='';
+  $('reviewStatus').value=f.status==='Draft'?'Validated':f.status;$('reviewDlg').showModal()}
+$('reviewOk').onclick=ev=>{const note=$('reviewNote').value.trim();
+  if(!note){ev.preventDefault();$('reviewErr').textContent='A validation note is required. Describe how you reproduced it.';return}
+  try{api('PATCH',`/engagements/${S.current}/findings/${reviewing}/review`,{status:$('reviewStatus').value,analyst_note:note});rerender();notify('Finding marked '+$('reviewStatus').value.toLowerCase())}catch(ex){notify(ex.message,true)}};
+
+/* ---- report ---- */
+function openReport(){const e=cur();const rows=S.findings.filter(f=>f.engagement_id===e.id);
+  reqlog('GET',`/engagements/${e.id}/report`,200);$('reportPath').textContent=`/api/engagements/${e.id.slice(0,8)}…/report`;
+  $('reportBody').innerHTML=`<h1>${esc(e.name)} — Findings</h1><p>Generated ${esc(now())} · Authorized engagement report</p>`+
+    (rows.map(r=>`<article><h2>${esc(r.title)}</h2><p><b>${esc(r.severity)} · ${esc(r.status)}</b> — ${esc(r.asset)}</p><h3>Description</h3><pre>${esc(r.description)}</pre><h3>Evidence</h3><pre>${esc(r.evidence)}</pre></article>`).join('')||'<p>No findings yet.</p>');
+  $('reportDlg').showModal()}
+$('reportBtn').onclick=openReport;$('reportClose').onclick=()=>$('reportDlg').close();
+
+/* ---- guided tours ---- */
+let touring=false,abort=false;
+const wait=ms=>new Promise((res,rej)=>setTimeout(()=>abort?rej(new Error('stopped')):res(),reduced?Math.min(ms,250):ms));
+function spot(id){document.querySelectorAll('.card.spot').forEach(c=>c.classList.remove('spot'));if(!id)return;const c=$(id);c.classList.add('spot');c.scrollIntoView({behavior:reduced?'auto':'smooth',block:'center'})}
+async function type(el,text){el.focus();el.value='';for(const ch of text){el.value+=ch;await wait(18)}}
+async function click(el){el.focus();await wait(250);el.click();await wait(150)}
+const TOURS=[
+ {k:'Scope',title:'Scope allowlist',desc:'Checks hosts against explicit scope entries. URLs, IPs, ports and the bare apex under a wildcard are refused.',steps:[
+  ['Select “Shop Platform BBP”. Its scope is api.example.net and *.shop.example.net.','cardEngs',()=>select('b81d44c0-demo-b')],
+  ['Every hostname goes through the same allowlist check the backend uses.','cardScope',async()=>{
+    const cases=['cdn.shop.example.net','shop.example.net','api.example.net','admin.example.net','https://api.example.net/v1','10.0.0.5','api.example.net:8443'];
+    $('scopeTable').innerHTML='<table><tr><th>Input</th><th>Result</th><th>Reason</th></tr><tbody id="scopeRows"></tbody></table>';
+    for(const c of cases){await type($('scopeInput'),c);$('scopeBtn').click();const r=checkScope(c);
+      $('scopeRows').insertAdjacentHTML('beforeend',`<tr class="new"><td class="host">${esc(c)}</td><td><span class="st ${r.ok?'st-Validated':''}" style="${r.ok?'':'color:var(--danger)'}">${r.ok?'Allowed':'Blocked'}</span></td><td>${esc(r.why)}</td></tr>`);await wait(650)}}],
+  ['Adding an out-of-scope asset fails with 403 before anything is stored.','cardAssets',async()=>{await type($('assetHost'),'shop.example.net');await click($('newAsset').querySelector('button'))}],
+  ['An in-scope subdomain is accepted.','cardAssets',async()=>{await type($('assetHost'),'cdn.shop.example.net');await click($('newAsset').querySelector('button'))}],
+ ]},
+ {k:'Recon',title:'Gated passive recon',desc:'Shows each gate in order: authorization checkbox, then active state. Then a subfinder job runs and its output is filtered against scope.',steps:[
+  ['Select “Example Corp VDP”. Engagements start STOPPED.','cardOverview',()=>{select('7f3c1a2e-demo-a');if(cur().active){api('POST',`/engagements/${S.current}/stop`);rerender()}}],
+  ['Starting discovery without the authorization checkbox returns 403.','cardRecon',async()=>{$('confirm').checked=false;await click($('runRecon'))}],
+  ['With the checkbox ticked, the stopped engagement still blocks the job.','cardRecon',async()=>{$('confirm').checked=true;await click($('runRecon'))}],
+  ['Activate the engagement once authorization is confirmed.','cardOverview',async()=>{if(!cur().active)await click($('activate'))}],
+  ['Start subfinder. Each returned host is rechecked; out-of-scope and malformed lines are dropped.','cardRecon',async()=>{$('reconTool').value='subfinder';$('confirm').checked=true;await click($('runRecon'));
+    while(S.jobs[0].status==='running')await wait(300)}],
+  ['Only in-scope hosts were committed to the inventory.','cardAssets',()=>{}],
+  ['The attack surface map updates from stored data only.','cardGraph',()=>{}],
+ ]},
+ {k:'Safety',title:'Emergency stop',desc:'Starts an amass job, then hits Emergency stop mid-run. The job is cancelled and none of its hosts are kept.',steps:[
+  ['Select “Example Corp VDP” and make sure it is active.','cardOverview',async()=>{select('7f3c1a2e-demo-a');if(!cur().active)await click($('activate'))}],
+  ['Start an amass passive job.','cardRecon',async()=>{$('reconTool').value='amass';$('confirm').checked=true;await click($('runRecon'));await wait(1500)}],
+  ['Emergency stop deactivates the engagement and sends SIGTERM to running jobs.','cardOverview',async()=>{await click($('stop'));await wait(700)}],
+  ['The job ends as cancelled with 0 hosts committed. New jobs stay blocked until reactivation.','cardRecon',async()=>{$('confirm').checked=true;await wait(500);await click($('runRecon'))}],
+ ]},
+ {k:'Triage',title:'Scanner import & triage',desc:'Imports Nuclei and Burp exports offline. Out-of-scope rows are rejected, the rest land as Draft until an analyst validates them.',steps:[
+  ['Select “Example Corp VDP”. Imports work even while stopped because nothing is executed.','cardOverview',()=>select('7f3c1a2e-demo-a')],
+  ['Load a Nuclei JSONL export with 4 observations.','cardImport',async()=>{$('importSource').value='nuclei';await click($('loadSample'));$('importConfirm').checked=true;await wait(500)}],
+  ['Import: a foreign domain and an IP target are rejected.','cardImport',async()=>{await click($('importBtn'))}],
+  ['Now a normalized Burp export. The ftp:// row is rejected as an unsupported URL.','cardImport',async()=>{$('importSource').value='burp';await click($('loadSample'));await click($('importBtn'))}],
+  ['Imported rows are Draft. Open Validate on one.','cardFindings',async()=>{const f=S.findings.find(x=>x.engagement_id===S.current&&x.status==='Draft');openReview(f.id);await wait(600);
+    await type($('reviewNote'),'Reproduced manually from tester account; response confirmed, no customer data accessed.');await wait(500);$('reviewOk').click();$('reviewDlg').close()}],
+  ['The analyst note is appended to the finding\'s evidence trail and the audit log.','cardAudit',()=>{}],
+ ]},
+ {k:'Evidence',title:'Evidence vault',desc:'Uploads are limited to safe document and image types, capped at 5 MiB, and fingerprinted with SHA-256.',steps:[
+  ['Select “Example Corp VDP”.','cardOverview',()=>select('7f3c1a2e-demo-a')],
+  ['An executable is refused by the extension allowlist.','cardEvidence',async()=>{try{await uploadEvidence('payload.exe',new Uint8Array([77,90,144,0]).buffer)}catch(ex){notify(ex.message,true)}}],
+  ['A text note is accepted and its SHA-256 is computed and recorded.','cardEvidence',async()=>{await click($('sampleEv'))}],
+ ]},
+ {k:'Report',title:'Printable report',desc:'Builds the HTML findings report the backend serves, ready for the browser\'s Save as PDF.',steps:[
+  ['Select “Example Corp VDP”.','cardOverview',()=>select('7f3c1a2e-demo-a')],
+  ['Open the printable report.','cardOverview',async()=>{await click($('reportBtn'))}],
+ ]},
+];
+$('scenarios').innerHTML=TOURS.map((t,i)=>`<div class="scn" id="scn${i}"><span class="k">${String(i+1).padStart(2,'0')} · ${esc(t.k)}</span><h3>${esc(t.title)}</h3><p>${esc(t.desc)}</p><button class="sm" data-tour="${i}">Run demo</button></div>`).join('')+
+  `<div class="scn"><span class="k">Reset</span><h3>Start over</h3><p>Restore the example engagements, assets and findings.</p><button class="ghost sm" id="resetBtn">Reset demo data</button></div>`;
+document.querySelectorAll('[data-tour]').forEach(b=>b.onclick=()=>runTour(+b.dataset.tour));
+$('resetBtn').onclick=()=>{if(touring)return;S.jobs.forEach(j=>j.cancel=true);seed();$('msg').hidden=true;$('importPayload').value=SAMPLES.nuclei;select(S.current);document.querySelectorAll('.scn').forEach(c=>c.classList.remove('running'))};
+$('capStop').onclick=()=>{abort=true};
+async function runTour(i){
+  if(touring)return;touring=true;abort=false;const t=TOURS[i];
+  document.querySelectorAll('[data-tour],#resetBtn').forEach(b=>b.disabled=true);$('scn'+i).classList.add('running');$('caption').hidden=false;
+  try{for(let s=0;s<t.steps.length;s++){const [text,card,fn]=t.steps[s];
+    $('capN').textContent=`${s+1} / ${t.steps.length}`;$('capT').innerHTML=`<b>${esc(t.title)}</b>${esc(text)}`;
+    spot(card);await wait(900);await fn();await wait(1500)}
+    $('capN').textContent='Done';$('capT').innerHTML=`<b>${esc(t.title)}</b>Demo finished. Everything above stays interactive.`;await wait(2200);
+  }catch(ex){if(ex.message!=='stopped')notify(ex.message,true)}
+  finally{spot(null);$('caption').hidden=true;$('scn'+i).classList.remove('running');document.querySelectorAll('[data-tour],#resetBtn').forEach(b=>b.disabled=false);touring=false}
+}
+
+seed();$('importPayload').value=SAMPLES.nuclei;rerender();
+</script>
+</body>
+</html>

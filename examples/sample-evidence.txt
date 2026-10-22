@@ -1,0 +1,6 @@
+SYNTHETIC EXAMPLE ONLY
+Finding: Demo missing authorization check
+Asset: app.example.org
+Steps: Log in with two test accounts under your control; compare permitted object access.
+Expected: Access denied for unauthorized test account.
+Observed: Example placeholder, not an actual vulnerability.

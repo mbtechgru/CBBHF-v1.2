@@ -1,0 +1,7 @@
+{
+  "name":"DEMO — documentation only",
+  "program_url":"https://example.org/policy",
+  "authorization":"Example only. Replace with an actual authorized program and verify rules before activation.",
+  "scope":["example.org","*.example.org"],
+  "active":false
+}
